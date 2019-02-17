@@ -4,7 +4,7 @@
 class Particle {
     constructor() {
         this.position = Vector.getRandomVector();
-        this.velocity = Vector.getRandomVector(0.2, 0.8);
+        this.velocity = Vector.getRandomVector(-0.8, 0.8);
 
         this.svg = document.createElementNS("http://www.w3.org/2000/svg","circle");
         this.svg.setAttribute("r","2");
@@ -51,6 +51,7 @@ class Vector {
 /*
     Global Vars
  */
+var running = false;
 
 var particles = [];
 var parentSVG = null;
@@ -58,11 +59,11 @@ var fpsDisplay;
 
 var scale = new Vector(500,500);
 
-var speed = 0.001;
-var lastUpdate = Date.now();
+var speed = 0.0001;
+var lastUpdate;
 
 var frames = 0;
-var startTime = lastUpdate;
+var startTime;
 
 /*
     Function
@@ -80,14 +81,28 @@ function startSwarm(svg, particleCount) {
         particles.push(new Particle())
     }
 
-    loopSwarm();
+    startSwarmLoop();
 }
 
 function setScale() {
     scale.x = window.innerWidth;
     scale.y = window.innerHeight;
 }
-
+function startSwarmLoop() {
+    if (running)
+        console.log("already running");
+    else{
+        running = true;
+        fpsDisplay.innerHTML = "starting";
+        startTime = Date.now();
+        lastUpdate = Date.now();
+        loopSwarm();
+    }
+}
+function stopSwarmLoop() {
+    running = false;
+    fpsDisplay.innerHTML = "Not running"
+}
 function loopSwarm() {
     var newDate = Date.now();
     var delta = newDate - lastUpdate;
@@ -109,5 +124,6 @@ function loopSwarm() {
         startTime = lastUpdate
     }
 
-    requestAnimationFrame(loopSwarm)
+    if (running)
+        requestAnimationFrame(loopSwarm)
 }

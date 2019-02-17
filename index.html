@@ -8,7 +8,9 @@
 </head>
 <body>
 <svg id="background"></svg>
-<div class="fpsDisplay">FPS:<span id="fps"></span></div>
+<div class="fpsDisplay" onclick="if(running) stopSwarmLoop(); else startSwarmLoop();">
+    FPS:<span id="fps"></span>
+</div>
 
 <script>
     startFPSDisplay(document.getElementById('fps'));
