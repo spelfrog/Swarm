@@ -54,17 +54,22 @@ class Vector {
 
 var particles = [];
 var parentSVG = null;
+var fpsDisplay;
 
 var scale = new Vector(500,500);
 
 var speed = 0.001;
 var lastUpdate = Date.now();
 
+var frames = 0;
+var startTime = lastUpdate;
 
 /*
     Function
  */
-
+function startFPSDisplay(fpsNode) {
+    fpsDisplay = fpsNode;
+}
 function startSwarm(svg, particleCount) {
     parentSVG = svg;
 
@@ -92,5 +97,17 @@ function loopSwarm() {
     }
 
     lastUpdate = newDate;
+
+    frames++;
+    if (lastUpdate > startTime + 1000){
+        if (fpsDisplay !== undefined)
+            fpsDisplay.innerHTML =
+                Math.round(frames
+                    //accounting for over time
+                    / ((lastUpdate-startTime)/1000));
+        frames = 0;
+        startTime = lastUpdate
+    }
+
     requestAnimationFrame(loopSwarm)
 }

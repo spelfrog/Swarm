@@ -8,3 +8,9 @@ body > svg{
     height: 100%;
     position: fixed;
 }
+.fpsDisplay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: white;
+}
