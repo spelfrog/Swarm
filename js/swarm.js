@@ -233,7 +233,7 @@ function loopSwarm() {
 
 
     for (var i = 0; i < particles.length; i++ ){
-        var points = tree.find(new Area(particles[i].position, new Vector(.3,.3)));
+        var points = tree.find(new Area(particles[i].position, new Vector(75/scale.x,75/scale.y)));
 
         for (var j = 0; j < points.length; j++ ){
             var abs1 = particles[i].position.absolute;
