@@ -5,17 +5,11 @@ class Particle {
     constructor() {
         this.position = Vector.getRandomVector();
         this.velocity = Vector.getRandomVector(-0.8, 0.8);
-
-        this.svg = document.createElementNS("http://www.w3.org/2000/svg","circle");
-        this.svg.setAttribute("r","2");
-        this.renderPosition();
-        parentSVG.appendChild(this.svg);
     }
 
     renderPosition() {
         var absolutePosition = this.position.absolute;
-        this.svg.setAttribute("cx", absolutePosition.x);
-        this.svg.setAttribute("cy", absolutePosition.y);
+        ctx.fillRect(absolutePosition.x, absolutePosition.y, 1, 1);
     }
 
     update(delta){
@@ -54,7 +48,8 @@ class Vector {
 var running = false;
 
 var particles = [];
-var parentSVG = null;
+var ctx = null;
+var obj = null;
 var fpsDisplay;
 
 var scale = new Vector(500,500);
@@ -71,8 +66,10 @@ var startTime;
 function startFPSDisplay(fpsNode) {
     fpsDisplay = fpsNode;
 }
-function startSwarm(svg, particleCount) {
-    parentSVG = svg;
+function startSwarm(canvas, particleCount) {
+    ctx = canvas.getContext("2d");
+    obj = canvas;
+
 
     window.onresize = setScale;
     setScale();
@@ -87,6 +84,9 @@ function startSwarm(svg, particleCount) {
 function setScale() {
     scale.x = window.innerWidth;
     scale.y = window.innerHeight;
+    obj.width = scale.x;
+    obj.height = scale.y;
+
 }
 function startSwarmLoop() {
     if (running)
@@ -106,6 +106,9 @@ function stopSwarmLoop() {
 function loopSwarm() {
     var newDate = Date.now();
     var delta = newDate - lastUpdate;
+
+    ctx.clearRect(0,0,scale.x,scale.y);
+    ctx.fillStyle = "#fff";
 
     for (var i = 0; i < particles.length; i++ ){
         particles[i].update(delta);
