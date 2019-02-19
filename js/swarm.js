@@ -170,6 +170,37 @@ class Particle extends Vector{
 
 
 }
+class Timer {
+    constructor(displayNode){
+        this.displayNode = displayNode;
+        this.displayNode.innerHTML = "Starting";
+        this.lastDisplayFPSUpdate = Date.now();
+        this.lastFrameStart = Date.now();
+        this.framesCountedSinceLastDisplayUpdate = 0;
+    }
+    startFrameRender(){
+        var newDate = Date.now();
+        this.delta = newDate - this.lastFrameStart;
+        this.lastFrameStart = newDate;
+        this.framesCountedSinceLastDisplayUpdate++;
+        return this.delta;
+    }
+    endFrameRender(){
+        this.frameTime = Date.now() - this.lastFrameStart;
+        this.updateFPSDisplay();
+    }
+    updateFPSDisplay(){
+        if (this.lastFrameStart > this.lastDisplayFPSUpdate + 1000){
+            if (this.displayNode !== undefined)
+                this.displayNode.innerHTML =
+                    Math.round(this.framesCountedSinceLastDisplayUpdate
+                        //accounting for over time
+                        / ((this.lastFrameStart-this.lastDisplayFPSUpdate)/1000));
+            this.framesCountedSinceLastDisplayUpdate = 0;
+            this.lastDisplayFPSUpdate = this.lastFrameStart
+        }
+    }
+}
 
 /*
     Global Vars
@@ -179,23 +210,18 @@ var running = false;
 var particles = [];
 var ctx = null;
 var obj = null;
-var fpsDisplay;
 
 var scale = new Vector(500,500);
 
 var speed = 0.0001;
-var lastUpdate;
-
-var frames = 0;
-var startTime;
+var timer;
 
 /*
     Function
  */
-function startFPSDisplay(fpsNode) {
-    fpsDisplay = fpsNode;
-}
-function startSwarm(canvas, particleCount) {
+function startSwarm(canvas, particleCount, fpsDisplay = undefined) {
+    timer = new Timer(fpsDisplay);
+
     ctx = canvas.getContext("2d");
     obj = canvas;
 
@@ -222,19 +248,14 @@ function startSwarmLoop() {
         console.log("already running");
     else{
         running = true;
-        fpsDisplay.innerHTML = "starting";
-        startTime = Date.now();
-        lastUpdate = Date.now();
         loopSwarm();
     }
 }
 function stopSwarmLoop() {
     running = false;
-    fpsDisplay.innerHTML = "Not running"
 }
 function loopSwarm() {
-    var newDate = Date.now();
-    var delta = newDate - lastUpdate;
+    timer.startFrameRender();
 
     ctx.clearRect(0,0,scale.x,scale.y);
     ctx.fillStyle = "#fff";
@@ -243,7 +264,7 @@ function loopSwarm() {
 
     var tree = new QuadTree(new Area(new Vector(0.5,0.5),new Vector(.5,.5)));
     for (var i = 0; i < particles.length; i++ ){
-        particles[i].update(delta);
+        particles[i].update(timer.delta);
         tree.insert(particles[i]);
     }
 
@@ -264,18 +285,7 @@ function loopSwarm() {
         }
     }
 
-    lastUpdate = newDate;
-
-    frames++;
-    if (lastUpdate > startTime + 1000){
-        if (fpsDisplay !== undefined)
-            fpsDisplay.innerHTML =
-                Math.round(frames
-                    //accounting for over time
-                    / ((lastUpdate-startTime)/1000));
-        frames = 0;
-        startTime = lastUpdate
-    }
+    timer.endFrameRender();
 
     if (running)
         requestAnimationFrame(loopSwarm)
