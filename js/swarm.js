@@ -1,24 +1,6 @@
 /*
     Classes
  */
-class Particle {
-    constructor() {
-        this.position = Vector.getRandomVector();
-        this.velocity = Vector.getRandomVector(-0.8, 0.8);
-    }
-
-    renderPosition() {
-        var absolutePosition = this.position.absolute;
-        ctx.fillRect(absolutePosition.x-1, absolutePosition.y-1, 3, 3);
-    }
-
-    update(delta){
-        this.position.applyVelocity(this.velocity, delta);
-        this.renderPosition()
-    }
-
-
-}
 class Vector {
     constructor(x,y) {
         this.x = x;
@@ -35,8 +17,12 @@ class Vector {
         this.x = ( this.x + v.x * delta * speed + 1) % 1;
         this.y = ( this.y + v.y * delta * speed + 1) % 1;
     }
-    add(vector){
+    addVector(vector){
         return new Vector(this.x + vector.x,this.y + vector.y)
+    }
+    render() {
+        var absolutePosition = this.absolute;
+        ctx.fillRect(absolutePosition.x-1, absolutePosition.y-1, 3, 3);
     }
     static getRandomVector(min = 0, max = 1){
         return new Vector(
@@ -66,7 +52,6 @@ class Area {
 
     }
 }
-
 class QuadTree {
     constructor(boundary){
         // Fields
@@ -87,7 +72,23 @@ class QuadTree {
         this.points = [];
         this.MAX_POINTS_IN_AREA = 4;
 
-        this.boundary = boundary
+        this.boundary = boundary;
+    }
+
+    drawBoundary() {
+        if (this.points != null) {
+            ctx.rect(
+                (this.boundary.center.x - this.boundary.radius.x) * scale.x,
+                (this.boundary.center.y - this.boundary.radius.y) * scale.y,
+                this.boundary.radius.x*2 * scale.x,
+                this.boundary.radius.y*2 * scale.y);
+            ctx.stroke();
+        } else {
+            this.northEast.drawBoundary();
+            this.northWest.drawBoundary();
+            this.southWest.drawBoundary();
+            this.southEast.drawBoundary();
+        }
     }
 
     insert(point){ //TODO redo
@@ -97,9 +98,7 @@ class QuadTree {
         if (this.points != null && this.points.length < this.MAX_POINTS_IN_AREA){
             this.points.push(point);
             return true;
-        }
-
-        if (this.points != null)
+        }else if (this.points != null)
             this.subdivide();
 
         if (this.northWest.insert(point)) return true;
@@ -113,21 +112,22 @@ class QuadTree {
     subdivide(){
         var radius = new Vector(this.boundary.radius.x/2,this.boundary.radius.y/2);
         this.northWest = new QuadTree(
-            new Area(this.boundary.center.add(new Vector(-radius.x, radius.y)), radius));
+            new Area(this.boundary.center.addVector(new Vector(-radius.x, radius.y)), radius));
         this.northEast = new QuadTree(
-            new Area(this.boundary.center.add(new Vector(radius.x, radius.y)), radius));
+            new Area(this.boundary.center.addVector(new Vector(radius.x, radius.y)), radius));
         this.southWest = new QuadTree(
-            new Area(this.boundary.center.add(new Vector(-radius.x, -radius.y)), radius));
+            new Area(this.boundary.center.addVector(new Vector(-radius.x, -radius.y)), radius));
         this.southEast = new QuadTree(
-            new Area(this.boundary.center.add(new Vector(radius.x, -radius.y)), radius));
+            new Area(this.boundary.center.addVector(new Vector(radius.x, -radius.y)), radius));
 
         for (var i = 0; i < this.points.length; i++){
             var point = this.points[i];
 
-            if (this.northWest.insert(point)) break;
-            else if (this.northEast.insert(point)) break;
-            else if (this.southWest.insert(point)) break;
-            else (this.southEast.insert(point));
+            if (this.northWest.insert(point)) continue;
+            else if (this.northEast.insert(point)) continue;
+            else if (this.southWest.insert(point)) continue;
+            else if (this.southEast.insert(point)) continue;
+            else alert("error")
         }
         this.points = null;
     }
@@ -153,6 +153,22 @@ class QuadTree {
 
         return points;
     }
+}
+class Particle extends Vector{
+    constructor(p = Vector.getRandomVector() ,v = Vector.getRandomVector(-1, 1) ) {
+        super(p.x,p.y);
+        this.velocity = v;
+
+    }
+    get position(){
+        return this;
+    }
+
+    update(delta){
+        this.position.applyVelocity(this.velocity, delta);
+    }
+
+
 }
 
 /*
@@ -188,7 +204,7 @@ function startSwarm(canvas, particleCount) {
     setScale();
 
     for (var i = 0; i < particleCount; i++) {
-        particles.push(new Particle())
+        particles.push(new Particle());
     }
 
     startSwarmLoop();
@@ -228,14 +244,17 @@ function loopSwarm() {
     var tree = new QuadTree(new Area(new Vector(0.5,0.5),new Vector(.5,.5)));
     for (var i = 0; i < particles.length; i++ ){
         particles[i].update(delta);
-        tree.insert(particles[i].position);
+        tree.insert(particles[i]);
     }
 
-
     for (var i = 0; i < particles.length; i++ ){
-        var points = tree.find(new Area(particles[i].position, new Vector(75/scale.x,75/scale.y)));
+        //render point
+        particles[i].render();
 
+        //render lines
+        var points = tree.find(new Area(particles[i].position, new Vector(66/scale.x,66/scale.y)));
         for (var j = 0; j < points.length; j++ ){
+            if (particles[i] === points[j]) continue;
             var abs1 = particles[i].position.absolute;
             var abs2 = points[j].absolute;
             ctx.beginPath();
