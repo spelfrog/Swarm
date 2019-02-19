@@ -1,4 +1,13 @@
 /*
+    Global Vars
+ */
+var ctx = null;
+
+var scale = null;
+var speed = 0.0001;
+
+
+/*
     Classes
  */
 class Vector {
@@ -174,6 +183,9 @@ class Timer {
     constructor(displayNode){
         this.displayNode = displayNode;
         this.displayNode.innerHTML = "Starting";
+        this.reset();
+    }
+    reset(){
         this.lastDisplayFPSUpdate = Date.now();
         this.lastFrameStart = Date.now();
         this.framesCountedSinceLastDisplayUpdate = 0;
@@ -201,92 +213,77 @@ class Timer {
         }
     }
 }
+class Swarm {
+    constructor(canvas, options){
+        this.canvas = canvas;
+        this.ctx = this.canvas.getContext("2d");
+        ctx = this.ctx;
 
-/*
-    Global Vars
- */
-var running = false;
+        this.timer = new Timer(options.fpsDisplay);
 
-var particles = [];
-var ctx = null;
-var obj = null;
+        window.onresize = this.setScale;
+        this.setScale();
 
-var scale = new Vector(500,500);
+        this.particles = [];
+        for (var i = 0; i < (options.particles || 300); i++) {
+            this.particles.push(new Particle());
+        }
 
-var speed = 0.0001;
-var timer;
-
-/*
-    Function
- */
-function startSwarm(canvas, particleCount, fpsDisplay = undefined) {
-    timer = new Timer(fpsDisplay);
-
-    ctx = canvas.getContext("2d");
-    obj = canvas;
-
-
-    window.onresize = setScale;
-    setScale();
-
-    for (var i = 0; i < particleCount; i++) {
-        particles.push(new Particle());
+        this.start();
     }
 
-    startSwarmLoop();
-}
-
-function setScale() {
-    scale.x = window.innerWidth;
-    scale.y = window.innerHeight;
-    obj.width = scale.x;
-    obj.height = scale.y;
-
-}
-function startSwarmLoop() {
-    if (running)
-        console.log("already running");
-    else{
-        running = true;
-        loopSwarm();
-    }
-}
-function stopSwarmLoop() {
-    running = false;
-}
-function loopSwarm() {
-    timer.startFrameRender();
-
-    ctx.clearRect(0,0,scale.x,scale.y);
-    ctx.fillStyle = "#fff";
-    ctx.strokeStyle = '#f00';
-    ctx.strokeWidth = 1;
-
-    var tree = new QuadTree(new Area(new Vector(0.5,0.5),new Vector(.5,.5)));
-    for (var i = 0; i < particles.length; i++ ){
-        particles[i].update(timer.delta);
-        tree.insert(particles[i]);
+    setScale() {
+        scale = new Vector(window.innerWidth, window.innerHeight);
+        this.canvas.width = scale.x;
+        this.canvas.height = scale.y;
     }
 
-    for (var i = 0; i < particles.length; i++ ){
-        //render point
-        particles[i].render();
-
-        //render lines
-        var points = tree.find(new Area(particles[i].position, new Vector(66/scale.x,66/scale.y)));
-        for (var j = 0; j < points.length; j++ ){
-            if (particles[i] === points[j]) continue;
-            var abs1 = particles[i].position.absolute;
-            var abs2 = points[j].absolute;
-            ctx.beginPath();
-            ctx.moveTo(abs1.x, abs1.y);
-            ctx.lineTo(abs2.x, abs2.y);
-            ctx.stroke();
+    start(){
+        if (this.running)
+            console.log("already running");
+        else{
+            this.running = true;
+            this.timer.reset();
+            this.loop();
         }
     }
+    loop(){
+        this.timer.startFrameRender();
 
-    timer.endFrameRender();
+        this.ctx.clearRect(0,0,scale.x,scale.y);
+        this.ctx.fillStyle = "#fff";
+        this.ctx.strokeStyle = '#f00';
+        this.ctx.strokeWidth = 1;
 
-    if (running)
-        requestAnimationFrame(loopSwarm)
+        var tree = new QuadTree(new Area(new Vector(0.5,0.5),new Vector(.5,.5)));
+        for (var i = 0; i < this.particles.length; i++ ){
+            this.particles[i].update(this.timer.delta);
+            tree.insert(this.particles[i]);
+        }
+
+        for (var i = 0; i < this.particles.length; i++ ){
+            //render point
+            this.particles[i].render();
+
+            //render lines
+            var points = tree.find(new Area(this.particles[i].position, new Vector(66/scale.x,66/scale.y)));
+            for (var j = 0; j < points.length; j++ ){
+                if (this.particles[i] === points[j]) continue;
+                var abs1 = this.particles[i].position.absolute;
+                var abs2 = points[j].absolute;
+                ctx.beginPath();
+                ctx.moveTo(abs1.x, abs1.y);
+                ctx.lineTo(abs2.x, abs2.y);
+                ctx.stroke();
+            }
+        }
+
+        this.timer.endFrameRender();
+
+        if (this.running)
+            requestAnimationFrame(this.loop.bind(this));
+    }
+    stop(){
+        this.running = false;
+    }
 }

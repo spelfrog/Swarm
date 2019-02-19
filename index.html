@@ -15,10 +15,13 @@
 </div>
 
 <script>
-    startSwarm(
+    new Swarm(
         document.getElementById('background'),
-        300,
-        document.getElementById('fps')
+        {
+            fpsDisplay: document.getElementById('fps'),
+            particles: 300
+        }
+
     )
 </script>
 </body>
