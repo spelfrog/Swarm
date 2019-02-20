@@ -26,6 +26,7 @@
         <a onclick="swarm.renderDistance = !swarm.renderDistance">Distance</a>
         <a onclick="setDistanceMod(-.05)">-</a>
     </div>
+    <a onclick="fullscreen()">Fullscreen</a>
 
 </div>
 
@@ -40,11 +41,27 @@
         }
     );
     document.getElementById('particles').innerHTML = swarm.particles.length;
+
     function setDistanceMod(dis) {
         swarm.renderDistanceModifier += dis;
         document.getElementById('disMod').innerHTML = (swarm.renderDistanceModifier+"").substr(0,5);
     }
     setDistanceMod(0);
+
+
+    function fullscreen() {
+        var element = document.body;
+        console.log(element);
+
+        if (element.requestFullScreen) {
+            element.requestFullScreen();
+        } else if (element.mozRequestFullScreen) {
+            element.mozRequestFullScreen();
+        } else if (element.webkitRequestFullScreen) {
+            element.webkitRequestFullScreen();
+        }
+    };
+
 </script>
 </body>
 </html>
