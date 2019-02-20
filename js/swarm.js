@@ -90,6 +90,7 @@ class QuadTree {
 
     drawBoundary() {
         if (this.points != null) {
+            ctx.beginPath();
             ctx.rect(
                 (this.boundary.center.x - this.boundary.radius.x) * scale.x,
                 (this.boundary.center.y - this.boundary.radius.y) * scale.y,
