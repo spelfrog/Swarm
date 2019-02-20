@@ -226,7 +226,7 @@ class Swarm {
         this.canvas = canvas;
         this.ctx = this.canvas.getContext("2d");
         ctx = this.ctx;
-        window.onresize = this.setScale;
+        window.onresize = this.setScale.bind(this);
         this.setScale();
 
         this.timer = new Timer(options.fpsDisplay);
@@ -234,7 +234,7 @@ class Swarm {
 
 
         this.particles = [];
-        for (var i = 0; i < (options.particles || Math.floor(scale.x * scale.y / 6500)); i++) {
+        for (var i = 0; i < (options.particles || Math.max(Math.floor(scale.x * scale.y / 6500), 100)); i++) {
             var particle = new Particle();
             this.particles.push(particle);
         }
