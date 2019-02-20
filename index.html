@@ -26,7 +26,8 @@
         <a onclick="swarm.renderDistance = !swarm.renderDistance">Distance</a>
         <a onclick="setDistanceMod(-.05)">-</a>
     </div>
-    <a onclick="fullscreen()">Fullscreen</a>
+    <a onclick="fullscreen(document.body)">Fullscreen</a>
+    <a onclick="fullscreen(document.getElementById('background'))">No Gui</a>
 
 </div>
 
@@ -49,8 +50,7 @@
     setDistanceMod(0);
 
 
-    function fullscreen() {
-        var element = document.body;
+    function fullscreen(element) {
         console.log(element);
 
         if (element.requestFullScreen) {
