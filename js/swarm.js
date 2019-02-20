@@ -221,8 +221,11 @@ class Timer {
 class Swarm {
     constructor(canvas, options){
         this.debug = options.debug || false;
-        this.renderLines = options.renderLines || true;
-        this.renderPoints = options.renderPoints || true;
+
+        this.renderLines = options.renderLines === undefined ? true : options.renderLines;
+        this.renderPoints = options.renderPoints === undefined ? true : options.renderPoints;
+        this.renderDistance = options.renderDistance === undefined ? true : options.renderDistance;
+        this.renderDistanceModifier = options.renderDistanceModifier || 250;
 
         this.canvas = canvas;
         this.ctx = this.canvas.getContext("2d");
@@ -290,6 +293,13 @@ class Swarm {
                 if (this.renderLines) {
                     var abs1 = this.particles[i].position.absolute;
                     var abs2 = points[j].absolute;
+
+                    if(this.renderDistance) {
+                        var dis = Math.pow(abs1.x - abs2.x, 2);
+                        dis += Math.pow(abs1.y - abs2.y, 2);
+                        dis = this.renderDistanceModifier * scale.x / dis;
+                        this.ctx.strokeStyle = "rgb(" + dis + ",16,36)";
+                    }
                     ctx.beginPath();
                     ctx.moveTo(abs1.x, abs1.y);
                     ctx.lineTo(abs2.x, abs2.y);

@@ -13,12 +13,19 @@
     No Fun for you!
 </canvas>
 <div class="control">
-    <div class="fpsDisplay">
-        FPS:<span id="fps"></span>
+    <div id="info">
+        Particles: <span id="particles"></span><br>
+        FPS: <span id="fps"></span>
     </div>
     <a onclick="swarm.debug = !swarm.debug">Debug</a>
     <a onclick="swarm.renderPoints = !swarm.renderPoints">Points</a>
     <a onclick="swarm.renderLines = !swarm.renderLines">Lines</a>
+    <div>
+        <a onclick="swarm.renderDistanceModifier += 50">+</a>
+        <a onclick="swarm.renderDistance = !swarm.renderDistance">Distance</a>
+        <a onclick="swarm.renderDistanceModifier -= 50">-</a>
+    </div>
+
 </div>
 
 
@@ -28,8 +35,10 @@
         document.getElementById('background'),
         {
             fpsDisplay: document.getElementById('fps'),
+            renderPoints: false,
         }
-    )
+    );
+    document.getElementById('particles').innerHTML = swarm.particles.length;
 </script>
 </body>
 </html>

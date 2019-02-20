@@ -14,10 +14,21 @@ body > canvas{
     color: white;
     text-align: right;
 }
-.control a {
+.control> a {
     display: block;
-    background-color: rgba(255, 255, 255, 0.1);
-    padding: 3px 10px;
     margin: 3px;
+}
+.control > div {
+    display: block;
+    padding: 3px 0;
+    margin: 3px;
+}
+.control > div > a {
+    padding: 3px 5px;
+}
+.control a{
+    background-color: rgba(255, 255, 255, 0.1);
     text-align: center;
+    padding: 3px 10px;
+    cursor: pointer;
 }
