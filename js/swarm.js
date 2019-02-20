@@ -16,10 +16,7 @@ class Vector {
         this.y = y;
     }
     get absolute(){
-        return new Vector(
-            this.x * scale.x,
-            this.y * scale.y
-        )
+        return this.multiplyVector(scale);
     }
     applyVelocity(v, delta){
         //plus 1 to avoid negative numbers
@@ -28,6 +25,12 @@ class Vector {
     }
     addVector(vector){
         return new Vector(this.x + vector.x,this.y + vector.y)
+    }
+    multiplyVector(vector){
+        return new Vector(
+            this.x * vector.x,
+            this.y * vector.y
+        )
     }
     render() {
         var absolutePosition = this.absolute;
@@ -47,22 +50,22 @@ class Area {
     }
     containsPoint(position){
         return (position.x > this.center.x - this.radius.x) &&
-            (position.x < this.center.x + this.radius.x) &&
+            (position.x <= this.center.x + this.radius.x) &&
             (position.y > this.center.y - this.radius.y) &&
-            (position.y < this.center.y + this.radius.y);
+            (position.y <= this.center.y + this.radius.y);
     }
     intersectsArea(area){
-        return ((area.center.y - area.radius.y < this.center.y + this.radius.y) ||
+        return ((area.center.y - area.radius.y <= this.center.y + this.radius.y) ||
             (area.center.y + area.radius.y > this.center.y - this.radius.y))
             &&
-            ((area.center.x - area.radius.x < this.center.x + this.radius.x) ||
+            ((area.center.x - area.radius.x <= this.center.x + this.radius.x) ||
                 (area.center.x + area.radius.x > this.center.x - this.radius.x))
 
 
     }
 }
 class QuadTree {
-    constructor(boundary){
+    constructor(boundary,parent = null){
         // Fields
 
         /** 0 X
@@ -82,6 +85,7 @@ class QuadTree {
         this.MAX_POINTS_IN_AREA = 4;
 
         this.boundary = boundary;
+        this.parent = parent;
     }
 
     drawBoundary() {
@@ -121,13 +125,13 @@ class QuadTree {
     subdivide(){
         var radius = new Vector(this.boundary.radius.x/2,this.boundary.radius.y/2);
         this.northWest = new QuadTree(
-            new Area(this.boundary.center.addVector(new Vector(-radius.x, radius.y)), radius));
+            new Area(this.boundary.center.addVector(new Vector(-radius.x, radius.y)), radius),this);
         this.northEast = new QuadTree(
-            new Area(this.boundary.center.addVector(new Vector(radius.x, radius.y)), radius));
+            new Area(this.boundary.center.addVector(new Vector(radius.x, radius.y)), radius),this);
         this.southWest = new QuadTree(
-            new Area(this.boundary.center.addVector(new Vector(-radius.x, -radius.y)), radius));
+            new Area(this.boundary.center.addVector(new Vector(-radius.x, -radius.y)), radius),this);
         this.southEast = new QuadTree(
-            new Area(this.boundary.center.addVector(new Vector(radius.x, -radius.y)), radius));
+            new Area(this.boundary.center.addVector(new Vector(radius.x, -radius.y)), radius),this);
 
         for (var i = 0; i < this.points.length; i++){
             var point = this.points[i];
@@ -215,18 +219,24 @@ class Timer {
 }
 class Swarm {
     constructor(canvas, options){
+        this.debug = options.debug || false;
+        this.renderLines = options.renderLines || true;
+        this.renderPoints = options.renderPoints || true;
+
         this.canvas = canvas;
         this.ctx = this.canvas.getContext("2d");
         ctx = this.ctx;
-
-        this.timer = new Timer(options.fpsDisplay);
-
         window.onresize = this.setScale;
         this.setScale();
 
+        this.timer = new Timer(options.fpsDisplay);
+        this.tree = new QuadTree(new Area(new Vector(0.5,0.5),new Vector(.5,.5)));
+
+
         this.particles = [];
-        for (var i = 0; i < (options.particles || 300); i++) {
-            this.particles.push(new Particle());
+        for (var i = 0; i < (options.particles || Math.floor(scale.x * scale.y / 6500)); i++) {
+            var particle = new Particle();
+            this.particles.push(particle);
         }
 
         this.start();
@@ -250,31 +260,40 @@ class Swarm {
     loop(){
         this.timer.startFrameRender();
 
+        //resetting
         this.ctx.clearRect(0,0,scale.x,scale.y);
         this.ctx.fillStyle = "#fff";
         this.ctx.strokeStyle = '#f00';
         this.ctx.strokeWidth = 1;
 
-        var tree = new QuadTree(new Area(new Vector(0.5,0.5),new Vector(.5,.5)));
+        this.tree = new QuadTree(this.tree.boundary);
+        //updating
         for (var i = 0; i < this.particles.length; i++ ){
             this.particles[i].update(this.timer.delta);
-            tree.insert(this.particles[i]);
+            this.tree.insert(this.particles[i]);
         }
+
+        //rendering
+        if (this.debug)
+            this.tree.drawBoundary();
 
         for (var i = 0; i < this.particles.length; i++ ){
             //render point
-            this.particles[i].render();
+            if (this.renderPoints)
+                this.particles[i].render();
 
             //render lines
-            var points = tree.find(new Area(this.particles[i].position, new Vector(66/scale.x,66/scale.y)));
+            var points = this.tree.find(new Area(this.particles[i].position, new Vector(66/scale.x,66/scale.y)));
             for (var j = 0; j < points.length; j++ ){
                 if (this.particles[i] === points[j]) continue;
-                var abs1 = this.particles[i].position.absolute;
-                var abs2 = points[j].absolute;
-                ctx.beginPath();
-                ctx.moveTo(abs1.x, abs1.y);
-                ctx.lineTo(abs2.x, abs2.y);
-                ctx.stroke();
+                if (this.renderLines) {
+                    var abs1 = this.particles[i].position.absolute;
+                    var abs2 = points[j].absolute;
+                    ctx.beginPath();
+                    ctx.moveTo(abs1.x, abs1.y);
+                    ctx.lineTo(abs2.x, abs2.y);
+                    ctx.stroke();
+                }
             }
         }
 

@@ -5,23 +5,30 @@
     <title>Swarm</title>
     <script src="js/swarm.js"></script>
     <link rel="stylesheet" type="text/css" href="css/main.css">
+
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'/>
 </head>
 <body>
 <canvas id="background">
     No Fun for you!
 </canvas>
-<div class="fpsDisplay">
-    FPS:<span id="fps"></span>
+<div class="control">
+    <div class="fpsDisplay">
+        FPS:<span id="fps"></span>
+    </div>
+    <a onclick="swarm.debug = !swarm.debug">Debug</a>
+    <a onclick="swarm.renderPoints = !swarm.renderPoints">Points</a>
+    <a onclick="swarm.renderLines = !swarm.renderLines">Lines</a>
 </div>
 
+
+
 <script>
-    new Swarm(
+    var swarm = new Swarm(
         document.getElementById('background'),
         {
             fpsDisplay: document.getElementById('fps'),
-            particles: 300
         }
-
     )
 </script>
 </body>
