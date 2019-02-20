@@ -15,15 +15,16 @@
 <div class="control">
     <div id="info">
         Particles: <span id="particles"></span><br>
+        Distance: <span id="disMod"></span><br>
         FPS: <span id="fps"></span>
     </div>
     <a onclick="swarm.debug = !swarm.debug">Debug</a>
     <a onclick="swarm.renderPoints = !swarm.renderPoints">Points</a>
     <a onclick="swarm.renderLines = !swarm.renderLines">Lines</a>
     <div>
-        <a onclick="swarm.renderDistanceModifier += 50">+</a>
+        <a onclick="setDistanceMod(+.05)">+</a>
         <a onclick="swarm.renderDistance = !swarm.renderDistance">Distance</a>
-        <a onclick="swarm.renderDistanceModifier -= 50">-</a>
+        <a onclick="setDistanceMod(-.05)">-</a>
     </div>
 
 </div>
@@ -39,6 +40,11 @@
         }
     );
     document.getElementById('particles').innerHTML = swarm.particles.length;
+    function setDistanceMod(dis) {
+        swarm.renderDistanceModifier += dis;
+        document.getElementById('disMod').innerHTML = (swarm.renderDistanceModifier+"").substr(0,5);
+    }
+    setDistanceMod(0);
 </script>
 </body>
 </html>
