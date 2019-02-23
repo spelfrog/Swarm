@@ -1,13 +1,4 @@
 /*
-    Global Vars
- */
-var ctx = null;
-
-var scale = null;
-var speed = 0.0001;
-
-
-/*
     Classes
  */
 class Vector {
@@ -15,13 +6,10 @@ class Vector {
         this.x = x;
         this.y = y;
     }
-    get absolute(){
-        return this.multiplyVector(scale);
-    }
     applyVelocity(v, delta){
         //plus 1 to avoid negative numbers
-        this.x = ( this.x + v.x * delta * speed + 1) % 1;
-        this.y = ( this.y + v.y * delta * speed + 1) % 1;
+        this.x = ( this.x + v.x * delta + 1) % 1;
+        this.y = ( this.y + v.y * delta + 1) % 1;
     }
     addVector(vector){
         return new Vector(this.x + vector.x,this.y + vector.y)
@@ -31,10 +19,6 @@ class Vector {
             this.x * vector.x,
             this.y * vector.y
         )
-    }
-    render() {
-        var absolutePosition = this.absolute;
-        ctx.fillRect(absolutePosition.x-1, absolutePosition.y-1, 3, 3);
     }
     static getRandomVector(min = 0, max = 1){
         return new Vector(
@@ -88,39 +72,45 @@ class QuadTree {
         this.parent = parent;
     }
 
-    drawBoundary() {
+    drawBoundary(environment) {
         if (this.points != null) {
-            ctx.beginPath();
-            ctx.rect(
-                (this.boundary.center.x - this.boundary.radius.x) * scale.x,
-                (this.boundary.center.y - this.boundary.radius.y) * scale.y,
-                this.boundary.radius.x*2 * scale.x,
-                this.boundary.radius.y*2 * scale.y);
-            ctx.stroke();
+            environment.ctx.beginPath();
+            environment.ctx.rect(
+                (this.boundary.center.x - this.boundary.radius.x) * environment.scale.x,
+                (this.boundary.center.y - this.boundary.radius.y) * environment.scale.y,
+                this.boundary.radius.x*2 * environment.scale.x,
+                this.boundary.radius.y*2 * environment.scale.y);
+            environment.ctx.stroke();
         } else {
-            this.northEast.drawBoundary();
-            this.northWest.drawBoundary();
-            this.southWest.drawBoundary();
-            this.southEast.drawBoundary();
+            this.northEast.drawBoundary(environment);
+            this.northWest.drawBoundary(environment);
+            this.southWest.drawBoundary(environment);
+            this.southEast.drawBoundary(environment);
         }
     }
 
     insert(point){ //TODO redo
-        if (!this.boundary.containsPoint(point))
-            return false;
+        if (Array.isArray(point)){
+            for (var i = 0; i < point.length; i++) {
+                this.insert(point[i]);
+            }
+        }else{
+            if (!this.boundary.containsPoint(point))
+                return false;
 
-        if (this.points != null && this.points.length < this.MAX_POINTS_IN_AREA){
-            this.points.push(point);
-            return true;
-        }else if (this.points != null)
-            this.subdivide();
+            if (this.points != null && this.points.length < this.MAX_POINTS_IN_AREA){
+                this.points.push(point);
+                return true;
+            }else if (this.points != null)
+                this.subdivide();
 
-        if (this.northWest.insert(point)) return true;
-        if (this.northEast.insert(point)) return true;
-        if (this.southWest.insert(point)) return true;
-        if (this.southEast.insert(point)) return true;
+            if (this.northWest.insert(point)) return true;
+            if (this.northEast.insert(point)) return true;
+            if (this.southWest.insert(point)) return true;
+            if (this.southEast.insert(point)) return true;
 
-        alert("Fatal error!");
+            alert("Fatal error!");
+        }
     }
 
     subdivide(){
@@ -169,8 +159,9 @@ class QuadTree {
     }
 }
 class Particle extends Vector{
-    constructor(p = Vector.getRandomVector() ,v = Vector.getRandomVector(-1, 1) ) {
+    constructor(environment ,p = Vector.getRandomVector() ,v = Vector.getRandomVector(-1, 1) ) {
         super(p.x,p.y);
+        this.environment = environment;
         this.velocity = v;
 
     }
@@ -179,7 +170,40 @@ class Particle extends Vector{
     }
 
     update(delta){
-        this.position.applyVelocity(this.velocity, delta);
+        let speed = this.velocity.multiplyVector(this.environment.speed);
+        this.position.applyVelocity(speed, delta);
+    }
+    get absolute(){
+        return this.multiplyVector(this.environment.scale);
+    }
+
+    render() {
+        if (this.environment.renderPoints){
+            var absolutePosition = this.absolute;
+            this.environment.ctx.fillRect(absolutePosition.x-1, absolutePosition.y-1, 3, 3);
+        }
+
+        if (this.environment.renderLines) {
+            for (var j = 0; j < this.proximity.length; j++ ){
+                if (this.proximity[j] === this) continue;
+                var abs1 = this.absolute;
+                var abs2 = this.proximity[j].absolute;
+
+                if(this.environment.renderDistance) {
+                    let dis = Math.sqrt(
+                        Math.pow(abs1.x - abs2.x, 2) + Math.pow(abs1.y - abs2.y, 2)
+                    );
+
+                    dis = 1-dis/90;
+
+                    this.environment.ctx.strokeStyle = "rgba(255,0,0,"+dis+")";
+                }
+                this.environment.ctx.beginPath();
+                this.environment.ctx.moveTo(abs1.x, abs1.y);
+                this.environment.ctx.lineTo(abs2.x, abs2.y);
+                this.environment.ctx.stroke();
+            }
+        }
     }
 
 
@@ -227,9 +251,11 @@ class Swarm {
         this.renderDistance = options.renderDistance === undefined ? true : options.renderDistance;
         this.renderDistanceModifier = options.renderDistanceModifier || 0.6;
 
+        this.speedVector = new Vector();
+        this.speed =  options.speed || 0.0001;
+
         this.canvas = canvas;
         this.ctx = this.canvas.getContext("2d");
-        ctx = this.ctx;
         window.onresize = this.setScale.bind(this);
         this.setScale();
 
@@ -238,8 +264,8 @@ class Swarm {
 
 
         this.particles = [];
-        for (var i = 0; i < (options.particles || Math.max(Math.floor(scale.x * scale.y / 6500), 90)); i++) {
-            var particle = new Particle();
+        for (var i = 0; i < (options.particles || Math.max(Math.floor(this.scale.x * this.scale.y / 6500), 90)); i++) {
+            var particle = new Particle(this);
             this.particles.push(particle);
         }
 
@@ -247,9 +273,24 @@ class Swarm {
     }
 
     setScale() {
-        scale = new Vector(window.innerWidth, window.innerHeight);
-        this.canvas.width = scale.x;
-        this.canvas.height = scale.y;
+        this.scale = new Vector(window.innerWidth, window.innerHeight);
+        this.canvas.width = this.scale.x;
+        this.canvas.height = this.scale.y;
+    }
+    set speed(speed){
+        this.speedVector.x = speed;
+        this.speedVector.y = speed;
+    }
+    get speed(){
+        return this.speedVector;
+    }
+    clearScreen(){
+        this.ctx.clearRect(0,0,this.scale.x,this.scale.y);
+    }
+    resetStyle(){
+        this.ctx.fillStyle = "#fff";
+        this.ctx.strokeStyle = '#f00';
+        this.ctx.strokeWidth = 1;
     }
 
     start(){
@@ -262,52 +303,36 @@ class Swarm {
         }
     }
     loop(){
+        //frame start
         this.timer.startFrameRender();
 
         //resetting
-        this.ctx.clearRect(0,0,scale.x,scale.y);
-        this.ctx.fillStyle = "#fff";
-        this.ctx.strokeStyle = '#f00';
-        this.ctx.strokeWidth = 1;
+        this.clearScreen();
+        this.resetStyle();
 
-        this.tree = new QuadTree(this.tree.boundary);
-        //updating
-        for (var i = 0; i < this.particles.length; i++ ){
+        //updating position
+        for (let i = 0; i < this.particles.length; i++ ){
             this.particles[i].update(this.timer.delta);
-            this.tree.insert(this.particles[i]);
         }
+
+        //updating which particles are proximity
+        this.tree = new QuadTree(this.tree.boundary);
+        this.tree.insert(this.particles);
+
+        for (let i = 0; i < this.particles.length; i++ ){
+            this.particles[i].proximity = this.tree.find(new Area(this.particles[i].position, new Vector(66/this.scale.x,66/this.scale.x)));
+        }
+
 
         //rendering
         if (this.debug)
-            this.tree.drawBoundary();
+            this.tree.drawBoundary(this);
 
-        for (var i = 0; i < this.particles.length; i++ ){
-            //render point
-            if (this.renderPoints)
-                this.particles[i].render();
-
-            //render lines
-            var points = this.tree.find(new Area(this.particles[i].position, new Vector(66/scale.x,66/scale.y)));
-            for (var j = 0; j < points.length; j++ ){
-                if (this.particles[i] === points[j]) continue;
-                if (this.renderLines) {
-                    var abs1 = this.particles[i].position.absolute;
-                    var abs2 = points[j].absolute;
-
-                    if(this.renderDistance) {
-                        var dis = Math.pow(abs1.x - abs2.x, 2);
-                        dis += Math.pow(abs1.y - abs2.y, 2);
-                        dis = this.renderDistanceModifier * scale.x / dis;
-                        this.ctx.strokeStyle = "rgba(255,0,0,"+dis+")";
-                    }
-                    ctx.beginPath();
-                    ctx.moveTo(abs1.x, abs1.y);
-                    ctx.lineTo(abs2.x, abs2.y);
-                    ctx.stroke();
-                }
-            }
+        for (let i = 0; i < this.particles.length; i++ ){
+            this.particles[i].render();
         }
 
+        //frame end
         this.timer.endFrameRender();
 
         if (this.running)
