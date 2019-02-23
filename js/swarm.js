@@ -8,17 +8,32 @@ class Vector {
     }
     applyVelocity(v, delta){
         //plus 1 to avoid negative numbers
-        this.x = ( this.x + v.x * delta + 1) % 1;
-        this.y = ( this.y + v.y * delta + 1) % 1;
+        this.x = ( this.x + v.x * delta);
+        this.y = ( this.y + v.y * delta);
     }
     addVector(vector){
         return new Vector(this.x + vector.x,this.y + vector.y)
+    }
+    subtractVector(vector){
+        return new Vector(this.x - vector.x,this.y - vector.y)
+    }
+    getLength(){
+        return Math.sqrt(Math.pow(this.x,2) + Math.pow(this.y,2))
+    }
+    getDistance(vector){
+        return this.subtractVector(vector).getLength();
+    }
+    normalise(){
+        return this.scaleVector(1/this.getLength())
     }
     multiplyVector(vector){
         return new Vector(
             this.x * vector.x,
             this.y * vector.y
         )
+    }
+    scaleVector(s){
+        return this.multiplyVector(new Vector(s,s))
     }
     static getRandomVector(min = 0, max = 1){
         return new Vector(
@@ -159,7 +174,7 @@ class QuadTree {
     }
 }
 class Particle extends Vector{
-    constructor(environment ,p = Vector.getRandomVector() ,v = Vector.getRandomVector(-1, 1) ) {
+    constructor(environment ,p = Vector.getRandomVector() ,v = Vector.getRandomVector(-1,1) ) {
         super(p.x,p.y);
         this.environment = environment;
         this.velocity = v;
@@ -169,9 +184,34 @@ class Particle extends Vector{
         return this;
     }
 
-    update(delta){
+    updatePosition(delta){
         let speed = this.velocity.multiplyVector(this.environment.speed);
         this.position.applyVelocity(speed, delta);
+
+        if(this.environment.limitSpace){
+            this.x = (this.x + 1) % 1;
+            this.y = (this.y + 1) % 1;
+        }
+    }
+    updateVelocity(delta){
+        if(this.environment.centerGravity)
+            this.velocity = this.velocity.addVector(new Vector(0.5,0.5).subtractVector(this.position).scaleVector(.01));
+        if (this.environment.gravity)
+            for (let j = 0; j < this.proximity.length; j++ ) {
+                if (this.proximity[j] === this) continue;
+
+                this.velocity = this.velocity.addVector(
+                    this.proximity[j].subtractVector(this)
+                        .normalise()
+                        //.scaleVector(1/(this.getDistance(this.proximity[j])*10))
+                        .scaleVector(1/Math.pow(this.getDistance(this.proximity[j]),2)*0.000005)
+                )
+            }
+        if (this.environment.maxSpeed !== undefined){
+            this.velocity.x = Math.min(this.environment.maxSpeed, Math.max(-this.environment.maxSpeed, this.velocity.x));
+            this.velocity.y = Math.min(this.environment.maxSpeed, Math.max(-this.environment.maxSpeed, this.velocity.y));
+        }
+
     }
     get absolute(){
         return this.multiplyVector(this.environment.scale);
@@ -184,10 +224,10 @@ class Particle extends Vector{
         }
 
         if (this.environment.renderLines) {
-            for (var j = 0; j < this.proximity.length; j++ ){
+            for (let j = 0; j < this.proximity.length; j++ ){
                 if (this.proximity[j] === this) continue;
-                var abs1 = this.absolute;
-                var abs2 = this.proximity[j].absolute;
+                let abs1 = this.absolute;
+                let abs2 = this.proximity[j].absolute;
 
                 if(this.environment.renderDistance) {
                     let dis = Math.sqrt(
@@ -253,6 +293,11 @@ class Swarm {
 
         this.speedVector = new Vector();
         this.speed =  options.speed || 0.0001;
+        this.maxSpeed =  options.maxSpeed || 1.5;
+        this.centerGravity = options.centerGravity === undefined ? false : options.centerGravity;
+        this.gravity = options.gravity === undefined ? false : options.gravity;
+        this.limitSpace = options.limitSpace === undefined ? true : options.limitSpace;
+
 
         this.canvas = canvas;
         this.ctx = this.canvas.getContext("2d");
@@ -310,17 +355,22 @@ class Swarm {
         this.clearScreen();
         this.resetStyle();
 
+
         //updating position
         for (let i = 0; i < this.particles.length; i++ ){
-            this.particles[i].update(this.timer.delta);
+            this.particles[i].updatePosition(this.timer.delta);
         }
 
-        //updating which particles are proximity
+        //updating which particles are in proximity
         this.tree = new QuadTree(this.tree.boundary);
         this.tree.insert(this.particles);
-
         for (let i = 0; i < this.particles.length; i++ ){
             this.particles[i].proximity = this.tree.find(new Area(this.particles[i].position, new Vector(66/this.scale.x,66/this.scale.x)));
+        }
+
+        //updating Velocity
+        for (let i = 0; i < this.particles.length; i++ ){
+            this.particles[i].updateVelocity(this.timer.delta);
         }
 
 
@@ -331,6 +381,7 @@ class Swarm {
         for (let i = 0; i < this.particles.length; i++ ){
             this.particles[i].render();
         }
+
 
         //frame end
         this.timer.endFrameRender();

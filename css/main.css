@@ -18,6 +18,12 @@ body > canvas{
     display: block;
     margin: 3px;
 }
+.control a.on {
+    background-color: rgba(0, 255, 0, 0.1);;
+}
+.control a.off {
+    background-color: rgba(255, 0, 0, 0.1);;
+}
 .control > div {
     display: block;
     padding: 3px 0;

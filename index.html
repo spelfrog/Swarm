@@ -18,14 +18,18 @@
         Distance: <span id="disMod"></span><br>
         FPS: <span id="fps"></span>
     </div>
-    <a onclick="swarm.debug = !swarm.debug">Debug</a>
-    <a onclick="swarm.renderPoints = !swarm.renderPoints">Points</a>
-    <a onclick="swarm.renderLines = !swarm.renderLines">Lines</a>
+    <a class="off" onclick="c(swarm.debug = !swarm.debug,this)">Debug</a>
+    <a class="on" onclick="c(swarm.renderPoints = !swarm.renderPoints,this)">Points</a>
+    <a class="on" onclick="c(swarm.renderLines = !swarm.renderLines,this)">Lines</a>
     <div>
         <a onclick="setDistanceMod(+.05)">+</a>
-        <a onclick="swarm.renderDistance = !swarm.renderDistance">Distance</a>
+        <a class="on" onclick="c(swarm.renderDistance = !swarm.renderDistance,this)">Distance</a>
         <a onclick="setDistanceMod(-.05)">-</a>
     </div>
+    <a class="off" onclick="c(swarm.centerGravity = !swarm.centerGravity,this)">Gravity</a>
+    <a class="off" onclick="c(swarm.gravity = !swarm.gravity,this)">Attraction</a>
+    <a class="on" onclick="c(swarm.limitSpace = !swarm.limitSpace,this)">Limit Space</a>
+
     <a onclick="fullscreen(document.body)">Fullscreen</a>
     <a onclick="fullscreen(document.getElementById('background'))">No Gui</a>
 
@@ -38,7 +42,7 @@
         document.getElementById('background'),
         {
             fpsDisplay: document.getElementById('fps'),
-            renderPoints: false,
+            //renderPoints: false,
         }
     );
     document.getElementById('particles').innerHTML = swarm.particles.length;
@@ -60,7 +64,10 @@
         } else if (element.webkitRequestFullScreen) {
             element.webkitRequestFullScreen();
         }
-    };
+    }
+    function c(b,obj) {
+        obj.classList = b ? 'on' : 'off';
+    }
 
 </script>
 </body>
