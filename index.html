@@ -9,29 +9,27 @@
     <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'/>
 </head>
 <body>
-<canvas id="background">
-    No Fun for you!
-</canvas>
+<div id="backgroundContainer">
+    <canvas id="background">
+        No Fun for you!
+    </canvas>
+</div>
+
 <div class="control">
     <div id="info">
         Particles: <span id="particles"></span><br>
-        Distance: <span id="disMod"></span><br>
         FPS: <span id="fps"></span>
     </div>
     <a class="off" onclick="c(swarm.debug = !swarm.debug,this)">Debug</a>
     <a class="on" onclick="c(swarm.renderPoints = !swarm.renderPoints,this)">Points</a>
     <a class="on" onclick="c(swarm.renderLines = !swarm.renderLines,this)">Lines</a>
-    <div>
-        <a onclick="setDistanceMod(+.05)">+</a>
-        <a class="on" onclick="c(swarm.renderDistance = !swarm.renderDistance,this)">Distance</a>
-        <a onclick="setDistanceMod(-.05)">-</a>
-    </div>
     <a class="off" onclick="c(swarm.centerGravity = !swarm.centerGravity,this)">Gravity</a>
     <a class="off" onclick="c(swarm.gravity = !swarm.gravity,this)">Attraction</a>
     <a class="on" onclick="c(swarm.limitSpace = !swarm.limitSpace,this)">Limit Space</a>
 
     <a onclick="fullscreen(document.body)">Fullscreen</a>
-    <a onclick="fullscreen(document.getElementById('background'))">No Gui</a>
+    <a onclick="fullscreen(document.getElementById('backgroundContainer'))">No Gui</a>
+    <a onclick="fullscreen(document.getElementById('background'))">OLED Mode</a>
 
 </div>
 
@@ -42,17 +40,10 @@
         document.getElementById('background'),
         {
             fpsDisplay: document.getElementById('fps'),
-            //renderPoints: false,
+            renderPoints: false,
         }
     );
     document.getElementById('particles').innerHTML = swarm.particles.length;
-
-    function setDistanceMod(dis) {
-        swarm.renderDistanceModifier += dis;
-        document.getElementById('disMod').innerHTML = (swarm.renderDistanceModifier+"").substr(0,5);
-    }
-    setDistanceMod(0);
-
 
     function fullscreen(element) {
         console.log(element);
