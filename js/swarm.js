@@ -204,7 +204,7 @@ class Particle extends Vector{
                     this.proximity[j].subtractVector(this)
                         .normalise()
                         //.scaleVector(1/(this.getDistance(this.proximity[j])*10))
-                        .scaleVector(1/Math.pow(this.getDistance(this.proximity[j]),2)*0.000001*delta)
+                        .scaleVector(1/Math.pow(this.getDistance(this.proximity[j])+1,2)*0.0003*delta)
                 )
             }
         if (this.environment.maxSpeed !== undefined){
@@ -328,7 +328,7 @@ class Swarm {
 
         this.speedVector = new Vector();
         this.speed =  options.speed || 1/Math.max(this.scale.x,this.scale.y)/15;
-        this.maxSpeed =  options.maxSpeed || 1.5;
+        this.maxSpeed =  options.maxSpeed || undefined;
         this.centerGravity = options.centerGravity === undefined ? false : options.centerGravity;
         this.gravity = options.gravity === undefined ? false : options.gravity;
         this.limitSpace = options.limitSpace === undefined ? true : options.limitSpace;
@@ -394,7 +394,7 @@ class Swarm {
         this.tree = new QuadTree(this.tree.boundary);
         this.tree.insert(this.particles);
         for (let i = 0; i < this.particles.length; i++ ){
-            this.particles[i].proximity = this.tree.find(new Area(this.particles[i].position, new Vector(66/this.scale.x,66/this.scale.x)));
+            this.particles[i].proximity = this.tree.find(new Area(this.particles[i].position, new Vector(100/this.scale.x,100/this.scale.x)));
         }
 
         //updating Velocity
