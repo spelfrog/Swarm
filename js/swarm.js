@@ -204,7 +204,7 @@ class Particle extends Vector{
                     this.proximity[j].subtractVector(this)
                         .normalise()
                         //.scaleVector(1/(this.getDistance(this.proximity[j])*10))
-                        .scaleVector(1/Math.pow(this.getDistance(this.proximity[j]),2)*0.000005)
+                        .scaleVector(1/Math.pow(this.getDistance(this.proximity[j]),2)*0.000001*delta)
                 )
             }
         if (this.environment.maxSpeed !== undefined){
@@ -225,9 +225,14 @@ class Particle extends Vector{
 
         if (this.environment.renderLines) {
             for (let j = 0; j < this.proximity.length; j++ ){
+                //don't draw line to this
                 if (this.proximity[j] === this) continue;
-                let abs1 = this.absolute;
+                //draw line only once
+                if (this.x>this.proximity[j].x) continue;
+
+                    let abs1 = this.absolute;
                 let abs2 = this.proximity[j].absolute;
+
 
                 if(this.environment.renderDistance) {
                     let dis = Math.sqrt(
@@ -283,13 +288,38 @@ class Timer {
     }
 }
 class Swarm {
+    /**
+     * @param canvas the canvas element
+     * @param options is a object with various options:
+     *      debug bool
+     *          draw quad tree areas
+     *      renderLines bool
+     *          draw lines between near points
+     *      renderPoints bool
+     *          draw points
+     *      renderDistance bool
+     *          draws line with lower opacity if the line is longer
+     *      speed float
+     *          particle moment speed modifier
+     *      maxSpeed float or undefined
+     *          if defined maximum partial speed is caped to MaxSpeed
+     *      centerGravity bool
+     *          small pull on all particles towards the center
+     *      gravity bool
+     *          attraction between particles
+     *      limitSpace bool
+     *          a particle reaching the edge will reenter on the opposing edge
+     *      fpsDisplay DOMElement
+     *          a element to insert the the current fps rate
+     *      particles int
+     *          the number of particles
+     */
     constructor(canvas, options){
         this.debug = options.debug || false;
 
         this.renderLines = options.renderLines === undefined ? true : options.renderLines;
         this.renderPoints = options.renderPoints === undefined ? true : options.renderPoints;
         this.renderDistance = options.renderDistance === undefined ? true : options.renderDistance;
-        this.renderDistanceModifier = options.renderDistanceModifier || 0.6;
 
         this.speedVector = new Vector();
         this.speed =  options.speed || 0.0001;
@@ -335,7 +365,7 @@ class Swarm {
     resetStyle(){
         this.ctx.fillStyle = "#fff";
         this.ctx.strokeStyle = '#f00';
-        this.ctx.strokeWidth = 1;
+        this.ctx.strokeWidth = 2;
     }
 
     start(){
