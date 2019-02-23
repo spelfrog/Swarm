@@ -317,22 +317,21 @@ class Swarm {
     constructor(canvas, options){
         this.debug = options.debug || false;
 
+        this.canvas = canvas;
+        this.ctx = this.canvas.getContext("2d");
+        window.onresize = this.setScale.bind(this);
+        this.setScale();
+
         this.renderLines = options.renderLines === undefined ? true : options.renderLines;
         this.renderPoints = options.renderPoints === undefined ? true : options.renderPoints;
         this.renderDistance = options.renderDistance === undefined ? true : options.renderDistance;
 
         this.speedVector = new Vector();
-        this.speed =  options.speed || 0.0001;
+        this.speed =  options.speed || 1/Math.max(this.scale.x,this.scale.y)/15;
         this.maxSpeed =  options.maxSpeed || 1.5;
         this.centerGravity = options.centerGravity === undefined ? false : options.centerGravity;
         this.gravity = options.gravity === undefined ? false : options.gravity;
         this.limitSpace = options.limitSpace === undefined ? true : options.limitSpace;
-
-
-        this.canvas = canvas;
-        this.ctx = this.canvas.getContext("2d");
-        window.onresize = this.setScale.bind(this);
-        this.setScale();
 
         this.timer = new Timer(options.fpsDisplay);
         this.tree = new QuadTree(new Area(new Vector(0.5,0.5),new Vector(.5,.5)));
