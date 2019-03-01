@@ -532,3 +532,37 @@ class ParticleSpeedLimit extends ParticlePlugin{
         particle.velocity.y = Math.min(this.speedLimit, Math.max(-this.speedLimit, particle.velocity.y));
     }
 }
+class LineToMouseRenderer extends LineRenderer{
+    constructor(context, status = undefined, name = undefined){
+        super(context, status, name);
+        //todo create global vector for find radius
+        this.area = new Area(new Vector(),new Vector(100/this.context.scale.x,100/this.context.scale.x));
+
+        context.canvas.addEventListener("mousemove",function (e) {
+            this.area.center.x = e.clientX/this.context.scale.x;
+            this.area.center.y = e.clientY/this.context.scale.y;
+        }.bind(this));
+
+        this.rendered = false;
+    }
+    updatePosition(particle) {
+        this.rendered = false;
+    }
+    render(particle, proximityParticles) {
+        //render lines to mouse only once not on each particle
+        if (!this.rendered) {
+            let prox = this.context.tree.find(this.area);
+            let mouse = new Particle(this.context, this.area.center);
+
+            super.render(mouse, prox);
+
+            //subverting optimisation from LineRenderer
+            let mouseAsArray = [mouse];
+            for (let i = 0; i < prox.length; i++) {
+                super.render(prox[i], mouseAsArray);
+            }
+
+            this.rendered = true;
+        }
+    }
+}
