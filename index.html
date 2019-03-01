@@ -20,17 +20,18 @@
         Particles: <span id="particles"></span><br>
         FPS: <span id="fps"></span>
     </div>
-    <a class="off" onclick="c(swarm.debug = !swarm.debug,this)">Debug</a>
-    <!--a class="on" onclick="c(swarm.renderPoints = !swarm.renderPoints,this)">Points</--a>
-    <a class="on" onclick="c(swarm.renderLines = !swarm.renderLines,this)">Lines</a>
-    <a class="off" onclick="c(swarm.centerGravity = !swarm.centerGravity,this)">Gravity</a>
-    <a class="off" onclick="c(swarm.gravity = !swarm.gravity,this)">Attraction</a>
-    <a class="on" onclick="c(swarm.limitSpace = !swarm.limitSpace,this)">Limit Space</a>
-    <a class="off" onclick="c(swarm.maxSpeed = (swarm.maxSpeed === undefined) ? 3:undefined,this)">Speed Limit</a-->
+    <a class="off" onclick="setOnOrOff(swarm.debug = !swarm.debug,this)">Debug</a>
+    <a class="on" onclick="togglePlugin('NewtonianMotion',this)">NewtonianMotion</a>
+    <a class="on" onclick="togglePlugin('PointRenderer',this)">PointRenderer</a>
+    <a class="on" onclick="togglePlugin('LineRenderer',this)">LineRenderer</a>
+    <a class="on" onclick="togglePlugin('LimitSpace',this)">LimitSpace</a>
+    <a class="off" onclick="togglePlugin('CenterGravity',this)">CenterGravity</a>
+    <a class="off" onclick="togglePlugin('ParticleSpeedLimit',this)">ParticleSpeedLimit</a>
+    <a class="off" onclick="togglePlugin('LineToMouseRenderer',this)">LineToMouseRenderer</a>
+    <a class="off" onclick="togglePlugin('ParticleAttraction',this)">ParticleAttraction</a>
 
     <a onclick="fullscreen(document.body)">Fullscreen</a>
     <a onclick="fullscreen(document.getElementById('backgroundContainer'))">No Gui</a>
-    <a onclick="fullscreen(document.getElementById('background'))">OLED Mode</a>
 
 </div>
 
@@ -41,10 +42,16 @@
         document.getElementById('background'),
         {
             fpsDisplay: document.getElementById('fps'),
-            renderPoints: false,
         }
     );
     document.getElementById('particles').innerHTML = swarm.particles.length;
+
+    //adding all plugins not added by default
+    swarm
+        .addParticlePlugin(new CenterGravity(swarm,false))
+        .addParticlePlugin(new ParticleSpeedLimit(swarm,false))
+        .addParticlePlugin(new LineToMouseRenderer(swarm,false))
+        .addParticlePlugin(new ParticleAttraction(swarm,false));
 
     function fullscreen(element) {
         console.log(element);
@@ -57,8 +64,18 @@
             element.webkitRequestFullScreen();
         }
     }
-    function c(b,obj) {
-        obj.classList = b ? 'on' : 'off';
+    function togglePlugin(name,obj) {
+        let plugin = swarm.getParticlePlugin(name);
+        if (plugin.isEnabled){
+            plugin.disable();
+        }else{
+            plugin.enable();
+        }
+
+        setOnOrOff(plugin.isEnabled,obj)
+    }
+    function setOnOrOff(on,obj) {
+        obj.classList = on ? 'on' : 'off';
     }
 
 </script>

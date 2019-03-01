@@ -223,29 +223,17 @@ class Timer {
 }
 class Swarm {
     /**
-     * @param canvas the canvas element
-     * @param options is a object with various options:
-     *      debug bool
+     * @param canvas {HTMLElement} the canvas element
+     * @param options {object} is a object with various options:
+     *      debug {bool}
      *          draw quad tree areas
-     *      renderLines bool
-     *          draw lines between near points
-     *      renderPoints bool
-     *          draw points
-     *      renderDistance bool
-     *          draws line with lower opacity if the line is longer
-     *      speed float
+     *      speed {float}
      *          particle moment speed modifier
-     *      maxSpeed float or undefined
-     *          if defined maximum partial speed is caped to MaxSpeed
-     *      centerGravity bool
-     *          small pull on all particles towards the center
-     *      gravity bool
-     *          attraction between particles
-     *      limitSpace bool
-     *          a particle reaching the edge will reenter on the opposing edge
-     *      fpsDisplay DOMElement
+     *      particlePlugins {Array}
+     *          a Array of ParticlePlugins
+     *      fpsDisplay {HTMLElement}
      *          a element to insert the the current fps rate
-     *      particles int
+     *      particles {int}
      *          the number of particles
      */
     constructor(canvas, options){
@@ -276,6 +264,7 @@ class Swarm {
             new LimitSpace(this),
         ];
 
+        this.particlePlugins = [];
         for (let i = 0; i < plugins.length; i++) {
             this.addParticlePlugin(plugins[i]);
         }
@@ -305,6 +294,19 @@ class Swarm {
 
         for (let i = 0; i < this.particles.length; i++) {
             plugin.initialiseParticle(this.particles[i])
+        }
+        return this;
+    }
+    enableParticlePlugin(pluginName){
+        this.getParticlePlugin(pluginName).enable();
+    }
+    disableParticlePlugin(pluginName){
+        this.getParticlePlugin(pluginName).disable();
+    }
+    getParticlePlugin(pluginName){
+        for (let i = 0; i < this.particlePlugins.length; i++) {
+            if (this.particlePlugins[i].name === pluginName)
+                return this.particlePlugins[i];
         }
     }
 
@@ -442,6 +444,15 @@ class ParticlePlugin {
 
         throw (this.name + " requires Plugin " + pluginName);
     }
+    get isEnabled(){
+        return this.status;
+    }
+    disable(){
+        this.status = false;
+    }
+    enable(){
+        this.status = true;
+    }
 }
 class NewtonianMotion extends ParticlePlugin{
     initialiseParticle(particle){
@@ -520,7 +531,7 @@ class ParticleAttraction extends ParticlePlugin{
     }
 }
 class ParticleSpeedLimit extends ParticlePlugin{
-    constructor(context, speedLimit = 3, name = undefined, status = undefined){
+    constructor(context, status = undefined, name = undefined, speedLimit = 3){
         super(context, status, name);
         this.speedLimit = speedLimit;
     }
