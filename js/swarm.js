@@ -174,84 +174,18 @@ class QuadTree {
     }
 }
 class Particle extends Vector{
-    constructor(environment ,p = Vector.getRandomVector() ,v = Vector.getRandomVector(-1,1) ) {
+    constructor(environment ,p = Vector.getRandomVector()) {
         super(p.x,p.y);
         this.environment = environment;
-        this.velocity = v;
-
     }
+
     get position(){
         return this;
     }
 
-    updatePosition(delta){
-        let speed = this.velocity.multiplyVector(this.environment.speed);
-        this.position.applyVelocity(speed, delta);
-
-        if(this.environment.limitSpace){
-            this.x = (this.x + 1) % 1;
-            this.y = (this.y + 1) % 1;
-        }
-    }
-    updateVelocity(delta){
-        if(this.environment.centerGravity)
-            this.velocity = this.velocity.addVector(new Vector(0.5,0.5).subtractVector(this.position).scaleVector(.01));
-        if (this.environment.gravity)
-            for (let j = 0; j < this.proximity.length; j++ ) {
-                if (this.proximity[j] === this) continue;
-
-                this.velocity = this.velocity.addVector(
-                    this.proximity[j].subtractVector(this)
-                        .normalise()
-                        //.scaleVector(1/(this.getDistance(this.proximity[j])*10))
-                        .scaleVector(1/Math.pow(this.getDistance(this.proximity[j])+1,2)*0.0003*delta)
-                )
-            }
-        if (this.environment.maxSpeed !== undefined){
-            this.velocity.x = Math.min(this.environment.maxSpeed, Math.max(-this.environment.maxSpeed, this.velocity.x));
-            this.velocity.y = Math.min(this.environment.maxSpeed, Math.max(-this.environment.maxSpeed, this.velocity.y));
-        }
-
-    }
     get absolute(){
         return this.multiplyVector(this.environment.scale);
     }
-
-    render() {
-        if (this.environment.renderPoints){
-            var absolutePosition = this.absolute;
-            this.environment.ctx.fillRect(absolutePosition.x-1, absolutePosition.y-1, 3, 3);
-        }
-
-        if (this.environment.renderLines) {
-            for (let j = 0; j < this.proximity.length; j++ ){
-                //don't draw line to this
-                if (this.proximity[j] === this) continue;
-                //draw line only once
-                if (this.x>this.proximity[j].x) continue;
-
-                    let abs1 = this.absolute;
-                let abs2 = this.proximity[j].absolute;
-
-
-                if(this.environment.renderDistance) {
-                    let dis = Math.sqrt(
-                        Math.pow(abs1.x - abs2.x, 2) + Math.pow(abs1.y - abs2.y, 2)
-                    );
-
-                    dis = 1-dis/90;
-
-                    this.environment.ctx.strokeStyle = "rgba(255,0,0,"+dis+")";
-                }
-                this.environment.ctx.beginPath();
-                this.environment.ctx.moveTo(abs1.x, abs1.y);
-                this.environment.ctx.lineTo(abs2.x, abs2.y);
-                this.environment.ctx.stroke();
-            }
-        }
-    }
-
-
 }
 class Timer {
     constructor(displayNode){
@@ -322,16 +256,8 @@ class Swarm {
         window.onresize = this.setScale.bind(this);
         this.setScale();
 
-        this.renderLines = options.renderLines === undefined ? true : options.renderLines;
-        this.renderPoints = options.renderPoints === undefined ? true : options.renderPoints;
-        this.renderDistance = options.renderDistance === undefined ? true : options.renderDistance;
-
         this.speedVector = new Vector();
         this.speed =  options.speed || 1/Math.max(this.scale.x,this.scale.y)/15;
-        this.maxSpeed =  options.maxSpeed || undefined;
-        this.centerGravity = options.centerGravity === undefined ? false : options.centerGravity;
-        this.gravity = options.gravity === undefined ? false : options.gravity;
-        this.limitSpace = options.limitSpace === undefined ? true : options.limitSpace;
 
         this.timer = new Timer(options.fpsDisplay);
         this.tree = new QuadTree(new Area(new Vector(0.5,0.5),new Vector(.5,.5)));
@@ -341,6 +267,17 @@ class Swarm {
         for (var i = 0; i < (options.particles || Math.max(Math.floor(this.scale.x * this.scale.y / 6500), 90)); i++) {
             var particle = new Particle(this);
             this.particles.push(particle);
+        }
+
+        let plugins = options.particlePlugins || [
+            new NewtonianMotion(this),
+            new PointRenderer(this),
+            new LineRenderer(this),
+            new LimitSpace(this),
+        ];
+
+        for (let i = 0; i < plugins.length; i++) {
+            this.addParticlePlugin(plugins[i]);
         }
 
         this.start();
@@ -358,6 +295,19 @@ class Swarm {
     get speed(){
         return this.speedVector;
     }
+
+    addParticlePlugin(plugin){
+        if (this.particlePlugins === undefined)
+            this.particlePlugins = [];
+
+        plugin.checkRequirements();
+        this.particlePlugins.push(plugin);
+
+        for (let i = 0; i < this.particles.length; i++) {
+            plugin.initialiseParticle(this.particles[i])
+        }
+    }
+
     clearScreen(){
         this.ctx.clearRect(0,0,this.scale.x,this.scale.y);
     }
@@ -386,8 +336,11 @@ class Swarm {
 
 
         //updating position
-        for (let i = 0; i < this.particles.length; i++ ){
-            this.particles[i].updatePosition(this.timer.delta);
+        for (let p = 0; p < this.particlePlugins.length; p++) {
+            if (this.particlePlugins[p].status)
+                for (let i = 0; i < this.particles.length; i++ ){
+                    this.particlePlugins[p].updatePosition(this.particles[i])
+                }
         }
 
         //updating which particles are in proximity
@@ -398,8 +351,11 @@ class Swarm {
         }
 
         //updating Velocity
-        for (let i = 0; i < this.particles.length; i++ ){
-            this.particles[i].updateVelocity(this.timer.delta);
+        for (let p = 0; p < this.particlePlugins.length; p++) {
+            if (this.particlePlugins[p].status)
+                for (let i = 0; i < this.particles.length; i++ ){
+                    this.particlePlugins[p].updateProperties(this.particles[i], this.particles[i].proximity)
+                }
         }
 
 
@@ -407,8 +363,11 @@ class Swarm {
         if (this.debug)
             this.tree.drawBoundary(this);
 
-        for (let i = 0; i < this.particles.length; i++ ){
-            this.particles[i].render();
+        for (let p = 0; p < this.particlePlugins.length; p++) {
+            if (this.particlePlugins[p].status)
+                for (let i = 0; i < this.particles.length; i++ ){
+                    this.particlePlugins[p].render(this.particles[i], this.particles[i].proximity)
+                }
         }
 
 
@@ -420,5 +379,156 @@ class Swarm {
     }
     stop(){
         this.running = false;
+    }
+}
+class ParticlePlugin {
+    /**
+     * Use the constructor is a good place to supply settings for rendering and calculations
+     * @param context {Swarm} general information about the world
+     * @param status {Boolean} true enables the plugin false disables the plugin
+     * @param name {String} unique name for Requirements checking
+     */
+
+    constructor(context, status = true, name = this.constructor.name){
+        this.context = context;
+        this.status = status;
+        this.name = name
+    }
+
+    /**
+     * Use this function to define requirement's using the requiresPlugin function
+     */
+    checkRequirements(){
+        return true;
+    }
+    /**
+     * Use this function to add variables to particles needed in your further calculations like velocity
+     * @param particle {Particle} to update
+     */
+    initialiseParticle(particle){
+
+    }
+
+    /**
+     * Use this function to render particles and interactions with other particles
+     * @param particle {Particle} to update
+     * @param proximityParticles {array} other particles in the vicinity
+     */
+    render(particle, proximityParticles){
+
+    }
+
+    /**
+     * Use this function to apply calculated values from updateProperties to position
+     * @param particle {Particle} to update
+     */
+    updatePosition(particle){
+
+    }
+
+    /**
+     * Use this function to calculate particle properties like velocity
+     * @param particle {Particle} to update
+     * @param proximityParticles {array} other particles in the vicinity
+     */
+    updateProperties(particle, proximityParticles){
+
+    }
+
+    requiresPlugin(pluginName){
+        for (let i = 0; i < this.context.particlePlugins.length; i++) {
+            if (this.context.particlePlugins[i].name === pluginName) return true;
+        }
+
+        throw (this.name + " requires Plugin " + pluginName);
+    }
+}
+class NewtonianMotion extends ParticlePlugin{
+    initialiseParticle(particle){
+        particle.velocity = Vector.getRandomVector(-1,1);
+    }
+    updatePosition(particle){
+        let speed = particle.velocity.multiplyVector(this.context.speed);
+        particle.position.applyVelocity(speed, this.context.timer.delta);
+    }
+}
+class LimitSpace extends ParticlePlugin{
+    updatePosition(particle){
+        particle.x = (particle.x + 1) % 1;
+        particle.y = (particle.y + 1) % 1;
+    }
+}
+class PointRenderer extends ParticlePlugin{
+    render(particle, proximityParticles){
+        let absolutePosition = particle.absolute;
+        this.context.ctx.fillRect(absolutePosition.x-1, absolutePosition.y-1, 3, 3);
+    }
+}
+class LineRenderer extends ParticlePlugin{
+    render(particle, proximityParticles){
+        for (let j = 0; j < proximityParticles.length; j++ ){
+            //don't draw line to this
+            if (proximityParticles[j] === particle) continue;
+            //draw line only once
+            if (particle.x>proximityParticles[j].x) continue;
+
+            //get line start and end point
+            let abs1 = particle.absolute;
+            let abs2 = proximityParticles[j].absolute;
+
+            //calculate line transparency dependent on line length
+            let dis = Math.sqrt(
+                Math.pow(abs1.x - abs2.x, 2) + Math.pow(abs1.y - abs2.y, 2)
+            );
+            dis = 1-dis/90;
+
+            //setting line color
+            this.context.ctx.strokeStyle = "rgba(255,0,0,"+dis+")";
+
+            //drawing line
+            this.context.ctx.beginPath();
+            this.context.ctx.moveTo(abs1.x, abs1.y);
+            this.context.ctx.lineTo(abs2.x, abs2.y);
+            this.context.ctx.stroke();
+        }
+    }
+}
+class CenterGravity extends ParticlePlugin{
+    checkRequirements(){
+        this.requiresPlugin("NewtonianMotion");
+    }
+    updateProperties(particle, proximityParticles){
+        particle.velocity = particle.velocity.addVector(new Vector(0.5,0.5).subtractVector(particle.position).scaleVector(.01));
+    }
+}
+class ParticleAttraction extends ParticlePlugin{
+    checkRequirements(){
+        this.requiresPlugin("NewtonianMotion");
+    }
+    updateProperties(particle, proximityParticles){
+        for (let j = 0; j < proximityParticles.length; j++ ) {
+            if (proximityParticles[j] === particle) continue;
+
+            particle.velocity = particle.velocity.addVector(
+                proximityParticles[j].subtractVector(particle)
+                    .normalise()
+                    .scaleVector(1/Math.pow(particle.getDistance(proximityParticles[j])+1,2)*0.005)
+            )
+        }
+
+
+    }
+}
+class ParticleSpeedLimit extends ParticlePlugin{
+    constructor(context, speedLimit = 3, name = undefined, status = undefined){
+        super(context, status, name);
+        this.speedLimit = speedLimit;
+    }
+    checkRequirements(){
+        this.requiresPlugin("NewtonianMotion");
+    }
+    updateProperties(particle, proximityParticles){
+        particle.velocity.x = Math.min(this.speedLimit, Math.max(-this.speedLimit, particle.velocity.x));
+        particle.velocity.y = Math.min(this.speedLimit, Math.max(-this.speedLimit, particle.velocity.y));
     }
 }
