@@ -18,6 +18,7 @@ class Vector {
         return new Vector(this.x - vector.x,this.y - vector.y)
     }
     getLength(){
+        // noinspection JSSuspiciousNameCombination
         return Math.sqrt(Math.pow(this.x,2) + Math.pow(this.y,2))
     }
     getDistance(vector){
@@ -142,11 +143,11 @@ class QuadTree {
         for (var i = 0; i < this.points.length; i++){
             var point = this.points[i];
 
-            if (this.northWest.insert(point)) continue;
-            else if (this.northEast.insert(point)) continue;
-            else if (this.southWest.insert(point)) continue;
-            else if (this.southEast.insert(point)) continue;
-            else alert("error")
+            if (!this.northWest.insert(point)
+                && !this.northEast.insert(point)
+                && !this.southWest.insert(point)
+                && !this.southEast.insert(point))
+                alert("error")
         }
         this.points = null;
     }
@@ -313,11 +314,6 @@ class Swarm {
     clearScreen(){
         this.ctx.clearRect(0,0,this.scale.x,this.scale.y);
     }
-    resetStyle(){
-        this.ctx.fillStyle = "#fff";
-        this.ctx.strokeStyle = '#f00';
-        this.ctx.strokeWidth = 2;
-    }
 
     start(){
         if (this.running)
@@ -334,8 +330,6 @@ class Swarm {
 
         //resetting
         this.clearScreen();
-        this.resetStyle();
-
 
         //updating position
         for (let p = 0; p < this.particlePlugins.length; p++) {
@@ -383,6 +377,10 @@ class Swarm {
         this.running = false;
     }
 }
+
+/*
+    ParticlePlugin
+ */
 class ParticlePlugin {
     /**
      * Use the constructor is a good place to supply settings for rendering and calculations
@@ -403,6 +401,7 @@ class ParticlePlugin {
     checkRequirements(){
         return true;
     }
+
     /**
      * Use this function to add variables to particles needed in your further calculations like velocity
      * @param particle {Particle} to update
@@ -411,8 +410,9 @@ class ParticlePlugin {
 
     }
 
-    /**
+      /**
      * Use this function to render particles and interactions with other particles
+     * The function is call once for each particles
      * @param particle {Particle} to update
      * @param proximityParticles {array} other particles in the vicinity
      */
@@ -470,13 +470,29 @@ class LimitSpace extends ParticlePlugin{
     }
 }
 class PointRenderer extends ParticlePlugin{
+    constructor(context, status = undefined, name = undefined, fillStyle = '#fff'){
+        super(context, status, name);
+        this.fillStyle = fillStyle;
+
+    }
     render(particle, proximityParticles){
+        this.context.ctx.fillStyle = this.fillStyle;
         let absolutePosition = particle.absolute;
         this.context.ctx.fillRect(absolutePosition.x-1, absolutePosition.y-1, 3, 3);
     }
 }
 class LineRenderer extends ParticlePlugin{
+    constructor(context, status = undefined, name = undefined, lineRed = 0, lineGreen = 255, lineBlue = 0, lineWidth = 2){
+        super(context, status, name);
+        this.setLineStyle(lineBlue, lineGreen, lineBlue);
+        this.lineWidth = lineWidth;
+    }
+    setLineStyle(red, green, blue){
+        this.style = red + "," + green + "," + blue
+    }
     render(particle, proximityParticles){
+        this.context.ctx.strokeWidth = this.lineWidth;
+
         for (let j = 0; j < proximityParticles.length; j++ ){
             //don't draw line to this
             if (proximityParticles[j] === particle) continue;
@@ -494,7 +510,7 @@ class LineRenderer extends ParticlePlugin{
             dis = 1-dis/90;
 
             //setting line color
-            this.context.ctx.strokeStyle = "rgba(255,0,0,"+dis+")";
+            this.context.ctx.strokeStyle = "rgba("+this.style+","+dis+")";
 
             //drawing line
             this.context.ctx.beginPath();
@@ -505,11 +521,15 @@ class LineRenderer extends ParticlePlugin{
     }
 }
 class CenterGravity extends ParticlePlugin{
+    constructor(context, status = undefined, name = undefined, gravityWellPosition = new Vector(0.5,0.5)){
+        super(context, status, name);
+        this.gravityWellPosition = gravityWellPosition;
+    }
     checkRequirements(){
         this.requiresPlugin("NewtonianMotion");
     }
     updateProperties(particle, proximityParticles){
-        particle.velocity = particle.velocity.addVector(new Vector(0.5,0.5).subtractVector(particle.position).scaleVector(.01));
+        particle.velocity = particle.velocity.addVector(this.gravityWellPosition.subtractVector(particle.position).scaleVector(.01));
     }
 }
 class ParticleAttraction extends ParticlePlugin{
@@ -544,8 +564,8 @@ class ParticleSpeedLimit extends ParticlePlugin{
     }
 }
 class LineToMouseRenderer extends LineRenderer{
-    constructor(context, status = undefined, name = undefined){
-        super(context, status, name);
+    constructor(context, status = undefined, name = undefined, lineRed = undefined, lineGreen = undefined, lineBlue = undefined, lineWidth = undefined){
+        super(context, status, name, lineRed, lineGreen, lineBlue, lineWidth);
         //todo create global vector for find radius
         this.area = new Area(new Vector(),new Vector(100/this.context.scale.x,100/this.context.scale.x));
 
