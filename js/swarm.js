@@ -272,9 +272,15 @@ class Swarm {
 
         this.start();
     }
+    addParticle(particle){
+        for (let i = 0; i < this.particlePlugins.length; i++) {
+            this.particlePlugins[i].initialiseParticle(particle);
+        }
+        this.particles.push(particle);
+    }
 
     setScale() {
-        this.scale = new Vector(window.innerWidth, window.innerHeight);
+        this.scale = new Vector(this.canvas.clientWidth, this.canvas.clientHeight);
         this.canvas.width = this.scale.x;
         this.canvas.height = this.scale.y;
     }
